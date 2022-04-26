@@ -1,0 +1,1 @@
+[[ -f /var/lib/mysql-dumps/schema.sql ]] && mysql -uroot -proot parser < /var/lib/mysql-dumps/schema.sql
