@@ -1,0 +1,76 @@
+version: '3'
+services:
+
+  parser-grafana:
+    image: grafana/grafana
+    container_name: parser-grafana
+    volumes:
+      - ${PATH_TO_GRAFANA}:/var/lib/grafana
+    ports:
+      - ${PORT_GRAFANA}:3000
+    networks:
+      - parser-network
+  
+  parser-db:
+    build:
+      context: ./.docker/mysql/
+      dockerfile: Dockerfile
+    container_name: parser-db
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - ${PATH_TO_DBDATA}:/var/lib/mysql
+      - ${PATH_TO_SCHEMA}:/var/lib/mysql-dumps/
+    env_file:
+      - ./.env
+    networks:
+      - parser-network
+    ports:
+      - ${PORT_DB}:3306
+
+  parser-phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: parser-pma
+    links:
+      - parser-db
+    restart: always
+    ports:
+      - ${PORT_PMA}:80
+    networks:
+      - parser-network
+
+  parser-rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: parser-rabbitmq
+    ports:
+      - ${PORT_RABBITMQ}:5672
+      - ${PORT_RABBITMQ_WEB}:15672
+    networks:
+      - parser-network
+
+  parser-php-rabbit:
+    build:
+      context: ./.docker/php/
+      dockerfile: Dockerfile
+    container_name: parser-php-rabbit
+    depends_on:
+      - parser-rabbitmq
+    restart: unless-stopped
+    tty: true
+    env_file:
+      - ./.env
+    working_dir: /var/www
+    command: ["./bin/start_consumer.sh"]
+    volumes:
+      - ./:/var/www
+      - ./.docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - parser-network
+
+networks:
+  parser-network:
+    driver: bridge
+
+volumes:
+    dbdata:
+      driver: local

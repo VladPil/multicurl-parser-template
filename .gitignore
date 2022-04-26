@@ -1,0 +1,6 @@
+.env
+/.docker/mysql/dbdata/*
+/.docker/mysql/dump.sql
+.php-cs-fixer.cache
+.vscode
+.idea
